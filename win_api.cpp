@@ -1,4 +1,5 @@
 #include "win_api.h"
+#include "worker.h"
 
 win_api::win_api(worker *parent): m_worker(parent)
 {
@@ -200,4 +201,32 @@ void win_api::Open_Updater()
     //terminating the impersonation
     result = RevertToSelf();
     if (!result) {}
+
+    m_worker->pop=true;
+}
+
+QString win_api::getCurrentUserName()
+{
+    DWORD sessionId = WTSGetActiveConsoleSessionId();
+    if (sessionId == 0xFFFFFFFF) {
+        // handle the error
+        return QString();
+    }
+
+    LPWSTR username = nullptr;
+    DWORD size = 0;
+    if (WTSQuerySessionInformation(WTS_CURRENT_SERVER_HANDLE, sessionId, WTSUserName, &username, &size))
+    {
+        WCHAR* wUsername = new WCHAR[size / sizeof(WCHAR)];
+        wcscpy_s(wUsername, size / sizeof(WCHAR), username);
+        QString result = QString::fromWCharArray(wUsername);
+        WTSFreeMemory(username);
+        delete[] wUsername;
+        return result;
+    }
+    else
+    {
+        // handle the error
+        return QString();
+    }
 }
