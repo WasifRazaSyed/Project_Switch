@@ -251,6 +251,78 @@ void worker::Thresholds_Status()
         {
             if(status.ACLineStatus)
             {
+                SetIp();
+                QString result;
+                result=Request("status");
+                if(result=="1")
+                {
+                    result.clear();
+                    result=Request("getmac");
+                    if(result==client_mac)
+                    {
+                        result.clear();
+                        result=Request("off");
+                        if(result=="false")
+                        {
+                            GetSystemPowerStatus(&status);
+                            if(status.ACLineStatus==0)
+                            {
+                                client_connected=true;
+                                QString parser="Turned off at: "+QString::number(status.BatteryLifePercent);
+                                Log(parser);
+                            }
+                        }
+                        else
+                        {
+                            client_connected=false;
+                        }
+                    }
+                    else
+                    {
+                        client_connected=false;
+                    }
+                }
+                else if(result=="0")
+                {
+                    result.clear();
+                    result=Request("current");
+                    if(result=="1")
+                    {
+                        result.clear();
+                        result=Request("connect");
+                        if(result=="connected")
+                        {
+                            QUrl mac_url(QString("http://"+IP+"/setmac?mac=%1").arg(client_mac));
+                            QNetworkRequest set_mac_req(mac_url);
+                            manager->get(set_mac_req);
+
+                            client_connected=true;
+                            result.clear();
+                            result=Request("off");
+                            if(result=="false")
+                            {
+                                GetSystemPowerStatus(&status);
+                                if(status.ACLineStatus==0)
+                                {
+                                    QString parser="Turned off at: "+QString::number(status.BatteryLifePercent);
+                                    Log(parser);
+                                }
+                            }
+                            else
+                            {
+                                client_connected=false;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        client_connected=false;
+                    }
+                }
+                else
+                {
+                    client_connected=false;
+                }
 
             }
         }
@@ -258,7 +330,53 @@ void worker::Thresholds_Status()
         {
             if(client_connected)
             {
-
+                SetIp();
+                QString result;
+                result=Request("status");
+                if(result=="1")
+                {
+                    result.clear();
+                    result=Request("getmac");
+                    if(result==client_mac)
+                    {
+                        result.clear();
+                        result=Request("online");
+                        if(result=="0")
+                        {
+                            result.clear();
+                            result=Request("on");
+                            if(result=="true")
+                            {
+                                GetSystemPowerStatus(&status);
+                                if(status.ACLineStatus)
+                                {
+                                    QString parser="Turned on at: "+QString::number(status.BatteryLifePercent);
+                                    Log(parser);
+                                }
+                            }
+                            else
+                            {
+                                client_connected=false;
+                            }
+                        }
+                        else
+                        {
+                            client_connected=false;
+                        }
+                    }
+                    else
+                    {
+                        client_connected=false;
+                    }
+                }
+                else if(result=="0")
+                {
+                    //do nothing
+                }
+                else
+                {
+                    client_connected=false;
+                }
             }
         }
         QThread::sleep(30);
@@ -271,6 +389,7 @@ void worker::Plugged_In()
     GetSystemPowerStatus(&status);
     if(status.ACLineStatus)
     {
+        Fetch_Settings();
         SetIp();
         if(client_connected)
         {
@@ -400,7 +519,65 @@ void worker::Plugged_In()
 void worker::Plugged_Out()
 {
     QThread::sleep(2);
-
+    GetSystemPowerStatus(&status);
+    if(status.ACLineStatus==0)
+    {
+        Fetch_Settings();
+        SetIp();
+        if(client_connected==true)
+        {
+            if(!(status.BatteryLifePercent>=max_threshold))
+            {
+                QString result;
+                result=Request("status");
+                if(result=="0")
+                {
+                    client_connected=false;
+                }
+                else if(result=="1")
+                {
+                    result.clear();
+                    result=Request("getmac");
+                    if(result==client_mac)
+                    {
+                        result.clear();
+                        result=Request("online");
+                        if(result=="0")
+                        {
+                            result.clear();
+                            result=Request("on");
+                            if(result=="true")
+                            {
+                                GetSystemPowerStatus(&status);
+                                if(status.ACLineStatus)
+                                {
+                                    QString parser="Turned on at: "+QString::number(status.BatteryLifePercent);
+                                    Log(parser);
+                                }
+                                else
+                                {
+                                    client_connected=false;
+                                }
+                            }
+                            else
+                            {
+                                client_connected=false;
+                            }
+                        }
+                        else if(result=="1")
+                        {
+                            client_connected=false;
+                            Request("reset");
+                        }
+                    }
+                    else
+                    {
+                        client_connected=false;
+                    }
+                }
+            }
+        }
+    }
 }
 
 void worker::Log(const QString text)
@@ -421,6 +598,21 @@ void worker::Log(const QString text)
             out << text << "\n" << QDateTime::currentDateTime().toString("h:mm:ss ap dd/MM/yyyy") << "\n\n";
             // Close the file
             file.close();
+        }
+    }
+}
+
+void worker::reset()
+{
+    if(client_connected)
+    {
+        SetIp();
+        QString result;
+        result=Request("getmac");
+        if(result==client_mac)
+        {
+            result.clear();
+            result=Request("reset");
         }
     }
 }

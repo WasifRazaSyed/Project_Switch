@@ -39,6 +39,7 @@ public slots:
     void Plugged_In();
     void Plugged_Out();
     void Log(const QString text);
+    void reset();
 private:
     QNetworkAccessManager *manager;
     QString IP;
