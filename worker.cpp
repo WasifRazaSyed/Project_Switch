@@ -5,8 +5,15 @@ worker::worker(QObject *parent)
     : QObject{parent}, win(new win_api(this))
 {
     manager=new QNetworkAccessManager(this);
-    Q_UNUSED(QtConcurrent::run([this](){Plugged_Status();}));
-    Q_UNUSED(QtConcurrent::run([this](){Thresholds_Status();}));
+
+    connect(this, &worker::Plugged_, this, &worker::Plugged_In);
+    connect(this, &worker::UnPlugged_, this, &worker::Plugged_Out);
+
+    connect(this, &worker::fresh_out, this, [=](){
+        Q_UNUSED(QtConcurrent::run([this](){Plugged_Status();}));
+        Q_UNUSED(QtConcurrent::run([this](){Thresholds_Status();}));
+    });
+
 }
 
 worker::~worker()
@@ -51,6 +58,7 @@ QString worker::GetIp()
             && InterFace.flags().testFlag(QNetworkInterface::IsRunning)
             && !InterFace.flags().testFlag(QNetworkInterface::IsLoopBack))
         {
+            client_mac=InterFace.hardwareAddress().toLower().remove(QChar(':'));
             QList<QNetworkAddressEntry> IP_entries=InterFace.addressEntries();
             foreach(QNetworkAddressEntry IP, IP_entries)
             {
@@ -64,6 +72,18 @@ QString worker::GetIp()
     return QString();
 }
 
+void worker::SetIp()
+{
+    QString Ip=GetIp();
+    QStringList octet=Ip.split('.');
+    if(octet.size()>=3)
+    {
+        QString common=octet[0]+octet[1]+octet[2];
+        QString ip=common+"47";
+        this->IP=ip;
+    }
+}
+
 QString worker::Request(QString index)
 {
     QString result;
@@ -72,9 +92,22 @@ QString worker::Request(QString index)
     QNetworkRequest request(url);
     QNetworkReply *reply=manager->get(request);
 
+    QTimer timeout;
+    timeout.setSingleShot(true);
+    timeout.setInterval(4000);
+    connect(&timeout, &QTimer::timeout, this, [&](){
+        if(reply->isRunning())
+        {
+            reply->abort();
+        }
+    });
+
+    timeout.start();
+
     QScopedPointer<QEventLoop> loop(new QEventLoop());
     QObject::connect(reply, &QNetworkReply::finished, this, [&]()
     {
+        timeout.stop();
         if(reply->error()==QNetworkReply::NoError)
         {
             QByteArray reply_8bit=reply->readAll();
@@ -93,7 +126,55 @@ QString worker::Request(QString index)
 
 void worker::Fresh_Check()
 {
+    fresh=false;
+    GetSystemPowerStatus(&status);
+    if(status.ACLineStatus)
+    {
+        plugged=true;
+        SetIp();
+        QString tempMac=win->GetMacAdd(this->IP);
+        if(tempMac==mac)
+        {
+            QString result=Request("status");
+            if(result=="0")
+            {
+                result.clear();
+                result=Request("current");
+                if(result=="1")
+                {
+                    result.clear();
+                    result=Request("connect");
+                    if(result=="connected")
+                    {
+                        client_connected=true;
+                        QUrl set_mac_url(QString("http://"+IP+"/setmac?mac=%1").arg(client_mac));
+                        QNetworkRequest set_mac_req(set_mac_url);
+                        manager->get(set_mac_req);
 
+                        GetSystemPowerStatus(&status);
+                        if(status.BatteryLifePercent>=min_threshold)
+                        {
+                            result=Request("off");
+                            if(result=="false")
+                            {
+                                if(status.ACLineStatus==0)
+                                {
+                                    QString parser="Turned off at: "+QString::number(status.BatteryLifePercent);
+                                    Log(parser);
+                                }
+                            }
+                            if(status.BatteryLifeTime<=max_threshold)
+                            {
+                                special=true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    emit fresh_out();
+    return;
 }
 
 void worker::Check_Update()
@@ -157,7 +238,7 @@ void worker::Plugged_Status()
                 emit UnPlugged_();
             }
         }
-        Sleep(10);
+        QThread::msleep(15);
     }while(should_run==true);
 }
 
@@ -180,6 +261,167 @@ void worker::Thresholds_Status()
 
             }
         }
+        QThread::sleep(30);
     }while(should_run==true);
+}
+
+void worker::Plugged_In()
+{
+    QThread::sleep(10);
+    GetSystemPowerStatus(&status);
+    if(status.ACLineStatus)
+    {
+        SetIp();
+        if(client_connected)
+        {
+            QString result;
+            result=Request("status");
+            if(result=="1")
+            {
+                result.clear();
+                GetSystemPowerStatus(&status);
+                if(status.BatteryLifePercent<=min_threshold)
+                {
+                    result=Request("getmac");
+                    if(result!=client_mac)
+                    {
+                        client_connected=false;
+                    }
+                }
+                else
+                {
+                    if(special)
+                    {
+                        special=false;
+                    }
+                    else
+                    {
+                        client_connected=false;
+                        result.clear();
+                        Request("reset");
+                    }
+                }
+            }
+            else if(result=="0")
+            {
+                result.clear();
+                result=Request("current");
+                if(result=="0")
+                {
+                    client_connected=false;
+                }
+                else if(result=="1")
+                {
+                    result.clear();
+                    result=Request("connect");
+                    if(result=="connected")
+                    {
+                        QUrl mac_url(QString("http://"+IP+"/setmac?mac=%1").arg(client_mac));
+                        QNetworkRequest set_mac_req(mac_url);
+                        manager->get(set_mac_req);
+
+                        GetSystemPowerStatus(&status);
+                        if(status.BatteryLifePercent>=min_threshold)
+                        {
+                            result.clear();
+                            result=Request("off");
+                            if(result=="false")
+                            {
+                                result.clear();
+                                if(status.ACLineStatus==0)
+                                {
+                                    if(status.BatteryLifePercent<=max_threshold)
+                                    {
+                                        special=true;
+                                    }
+                                    QString parser="Turned off at: " + QString::number(status.BatteryLifePercent);
+                                    Log(parser);
+                                }
+                            }
+                            else
+                            {
+                                client_connected=false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            QThread::sleep(20);
+            QString result=Request("status");
+            if(result=="0")
+            {
+                QString temp_Mac=win->GetMacAdd(IP);
+                if(mac==temp_Mac)
+                {
+                    result.clear();
+                    result=Request("current");
+                    if(result=="1")
+                    {
+                        result.clear();
+                        result=Request("connect");
+                        if(result=="connected")
+                        {
+                            QUrl mac_url(QString("http://"+IP+"/setmac?mac=%1").arg(client_mac));
+                            QNetworkRequest set_mac_req(mac_url);
+                            manager->get(set_mac_req);
+
+                            client_connected=true;
+
+                            GetSystemPowerStatus(&status);
+                            if(status.BatteryLifePercent>=min_threshold)
+                            {
+                                result.clear();
+                                result=Request("off");
+                                if(result=="false")
+                                {
+                                    GetSystemPowerStatus(&status);
+                                    if(status.ACLineStatus==0)
+                                    {
+                                        if(status.BatteryLifePercent<=max_threshold)
+                                        {
+                                            special=true;
+                                        }
+                                        QString parser="Turned off at: "+QString::number(status.BatteryLifePercent);
+                                        Log(parser);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void worker::Plugged_Out()
+{
+    QThread::sleep(2);
+
+}
+
+void worker::Log(const QString text)
+{
+    QString path = win->getCurrentUserName();
+    QString filename = "C:/Users/" + path + "/AppData/Roaming/SmartSettings/Activity.txt";
+    QFile file(filename);
+
+    // Open the file in append mode
+    if (file.open(QIODevice::Append | QIODevice::Text))
+    {
+        QTextStream out(&file);
+
+        // Check if the file is open for writing
+        if (file.isOpen() && file.isWritable())
+        {
+            // Write the text and current time to the end of the file
+            out << text << "\n" << QDateTime::currentDateTime().toString("h:mm:ss ap dd/MM/yyyy") << "\n\n";
+            // Close the file
+            file.close();
+        }
+    }
 }
 
