@@ -220,7 +220,9 @@ void worker::Check_Update()
                 }
             }
         }
+        loop.quit();
     });
+    loop.exec();
     reply->deleteLater();
 }
 
