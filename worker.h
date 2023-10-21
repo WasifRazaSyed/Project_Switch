@@ -11,6 +11,8 @@
 #include <QScopedPointer>
 #include <QSettings>
 #include <windows.h>
+#include <QMutexLocker>
+#include <QMutex>
 
 class win_api;
 
@@ -26,9 +28,10 @@ public:
 signals:
     void Plugged_();
     void UnPlugged_();
-    void fresh_out();
+
 public slots:
     void Fetch_Settings();
+    void concurrent_starter();
     QString GetIp();
     void SetIp();
     QString Request(QString index);
@@ -39,9 +42,10 @@ public slots:
     void Plugged_In();
     void Plugged_Out();
     void Log(const QString text);
+    void shutdown();
     void reset();
 private:
-    QNetworkAccessManager *manager;
+    QMutex mutex;
     QString IP;
     QScopedPointer<win_api> win;
     SYSTEM_POWER_STATUS status;

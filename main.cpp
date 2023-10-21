@@ -3,6 +3,8 @@
 #include <windows.h>
 #include <strsafe.h>
 
+#include "worker.h"
+
 #define SVCNAME TEXT("BattEase Charger Control")
 #define SVCDES TEXT("Facilitating user-defined charging thresholds, this service automates battery charger operations with precision through the integration with the Charger Control settings application.")
 #define SVC_ERROR 0x00000001
@@ -11,12 +13,18 @@ SERVICE_STATUS status;
 SERVICE_STATUS_HANDLE status_handle;
 
 VOID WINAPI SVC_MAIN( DWORD, LPWSTR * );
+VOID init();
 VOID WINAPI Ctrl_HL( DWORD );
 BOOL WINAPI Console_HL(DWORD);
 VOID Event_Report(LPWSTR);
 VOID Set_Actions(SC_HANDLE);
 VOID Install();
 VOID Delete();
+
+int argc=0;
+char *argv={nullptr};
+QCoreApplication a(argc, &argv);
+worker *w;
 
 int main(int argc, char *argv[])
 {
@@ -82,6 +90,12 @@ VOID WINAPI SVC_MAIN( DWORD dw, LPWSTR * lp)
 
 }
 
+void init()
+{
+    w=new worker(&a);
+    a.exec();
+}
+
 VOID WINAPI Ctrl_HL(DWORD control)
 {
     switch (control)
@@ -102,6 +116,20 @@ VOID WINAPI Ctrl_HL(DWORD control)
         if (SetServiceStatus(status_handle, &status) == FALSE)
         {
             Event_Report(LPWSTR("[ServiceCtrlHandler] SetServiceStatus returned error"));
+        }
+
+        w->shutdown();
+        a.exit();
+
+
+        status.dwCurrentState = SERVICE_STOPPED;
+        status.dwWin32ExitCode = 0;
+        status.dwCheckPoint = 0;
+        status.dwWaitHint = 0;
+
+        if (SetServiceStatus(status_handle, &status) == FALSE)
+        {
+            Event_Report(LPTSTR("[ServiceCtrlHandler] SetServiceStatus returned error"));
         }
         break;
     }
@@ -124,6 +152,7 @@ BOOL WINAPI Console_HL(DWORD signal)
     if (signal == CTRL_SHUTDOWN_EVENT || signal == CTRL_LOGOFF_EVENT)
     {
         // handle shutdown or logoff event
+        w->reset();
     }
     return TRUE;
 }

@@ -4,25 +4,22 @@
 worker::worker(QObject *parent)
     : QObject{parent}, win(new win_api(this))
 {
-    manager=new QNetworkAccessManager(this);
-
     connect(this, &worker::Plugged_, this, &worker::Plugged_In);
     connect(this, &worker::UnPlugged_, this, &worker::Plugged_Out);
-
-    connect(this, &worker::fresh_out, this, [=](){
-        Q_UNUSED(QtConcurrent::run([this](){Plugged_Status();}));
-        Q_UNUSED(QtConcurrent::run([this](){Thresholds_Status();}));
-    });
+	
+    Fetch_Settings();
 
 }
 
 worker::~worker()
 {
     should_run=false;
+    win->should_run=false;
 }
 
 void worker::Fetch_Settings()
 {
+    QMutexLocker locker(&mutex);
     QString path=win->getCurrentUserName();
     QString location="C:/Users/"+path+"/AppData/Roaming/SmartSettings/settings.ini";
 
@@ -46,6 +43,12 @@ void worker::Fetch_Settings()
     {
         Check_Update();
     }
+}
+
+void worker::concurrent_starter()
+{
+    Q_UNUSED(QtConcurrent::run([this](){Plugged_Status();}));
+    Q_UNUSED(QtConcurrent::run([this](){Thresholds_Status();}));
 }
 
 
@@ -78,8 +81,8 @@ void worker::SetIp()
     QStringList octet=Ip.split('.');
     if(octet.size()>=3)
     {
-        QString common=octet[0]+octet[1]+octet[2];
-        QString ip=common+"47";
+        QString common=octet[0]+"."+octet[1]+"."+octet[2];
+        QString ip=common+".47";
         this->IP=ip;
     }
 }
@@ -87,10 +90,10 @@ void worker::SetIp()
 QString worker::Request(QString index)
 {
     QString result;
-
+    QNetworkAccessManager local;
     QUrl url("http://"+IP+"/"+index);
     QNetworkRequest request(url);
-    QNetworkReply *reply=manager->get(request);
+    QNetworkReply *reply=local.get(request);
 
     QTimer timeout;
     timeout.setSingleShot(true);
@@ -107,7 +110,6 @@ QString worker::Request(QString index)
     QScopedPointer<QEventLoop> loop(new QEventLoop());
     QObject::connect(reply, &QNetworkReply::finished, this, [&]()
     {
-        timeout.stop();
         if(reply->error()==QNetworkReply::NoError)
         {
             QByteArray reply_8bit=reply->readAll();
@@ -147,9 +149,10 @@ void worker::Fresh_Check()
                     if(result=="connected")
                     {
                         client_connected=true;
-                        QUrl set_mac_url(QString("http://"+IP+"/setmac?mac=%1").arg(client_mac));
-                        QNetworkRequest set_mac_req(set_mac_url);
-                        manager->get(set_mac_req);
+                        QNetworkAccessManager very_local_manager;
+                        QUrl mac_url(QString("http://"+IP+"/setmac?mac=%1").arg(client_mac));
+                        QNetworkRequest set_mac_req(mac_url);
+                        very_local_manager.get(set_mac_req);
 
                         GetSystemPowerStatus(&status);
                         if(status.BatteryLifePercent>=min_threshold)
@@ -173,15 +176,17 @@ void worker::Fresh_Check()
             }
         }
     }
-    emit fresh_out();
+    concurrent_starter();
     return;
 }
 
 void worker::Check_Update()
 {
+    QEventLoop loop;
+    QNetworkAccessManager local;
     QUrl version("https://api.github.com/repos/WasifRazaSyed/ProFile/releases/latest");
     QNetworkRequest request(version);
-    QNetworkReply* reply = manager->get(request);
+    QNetworkReply* reply = local.get(request);
 
     QTimer *singleshot=new QTimer(this);
     singleshot->setSingleShot(true);
@@ -195,29 +200,25 @@ void worker::Check_Update()
         }
     });
 
-    connect(reply, &QNetworkReply::finished, this, [=](){
-        singleshot->stop();
-        singleshot->deleteLater();
+    singleshot->start();
 
-        if (reply->error() != QNetworkReply::NoError)
+    connect(reply, &QNetworkReply::finished, this, [&](){
+        if(reply->error()==QNetworkReply::NoError)
         {
-            reply->abort();
-            return;
-        }
-        QByteArray data = reply->readAll();
-        QJsonDocument document = QJsonDocument::fromJson(data);
-
-        if (document.isNull())
-        {
-            return;
-        }
-
-        QJsonObject rootObject = document.object();
-
-        newversion = rootObject.value("tag_name").toString();
-        if(oldversion!=newversion && newversion !="")
-        {
-            win->Open_Updater();
+            QByteArray jsonData=reply->readAll();
+            QJsonDocument jsonDoc=QJsonDocument::fromJson(jsonData);
+            if(jsonDoc.isObject())
+            {
+                QJsonObject jsonObject=jsonDoc.object();
+                if(jsonObject.contains("tag_name"))
+                {
+                    newversion=jsonObject["tag_name"].toString();
+                    if(oldversion!=newversion && newversion !="")
+                    {
+                        win->Open_Updater();
+                    }
+                }
+            }
         }
     });
     reply->deleteLater();
@@ -292,9 +293,10 @@ void worker::Thresholds_Status()
                         result=Request("connect");
                         if(result=="connected")
                         {
+                            QNetworkAccessManager very_local_manager;
                             QUrl mac_url(QString("http://"+IP+"/setmac?mac=%1").arg(client_mac));
                             QNetworkRequest set_mac_req(mac_url);
-                            manager->get(set_mac_req);
+                            very_local_manager.get(set_mac_req);
 
                             client_connected=true;
                             result.clear();
@@ -379,13 +381,13 @@ void worker::Thresholds_Status()
                 }
             }
         }
-        QThread::sleep(30);
+        QThread::msleep(500);
     }while(should_run==true);
 }
 
 void worker::Plugged_In()
 {
-    QThread::sleep(10);
+    QThread::sleep(5);
     GetSystemPowerStatus(&status);
     if(status.ACLineStatus)
     {
@@ -435,9 +437,10 @@ void worker::Plugged_In()
                     result=Request("connect");
                     if(result=="connected")
                     {
+                        QNetworkAccessManager very_local_manager;
                         QUrl mac_url(QString("http://"+IP+"/setmac?mac=%1").arg(client_mac));
                         QNetworkRequest set_mac_req(mac_url);
-                        manager->get(set_mac_req);
+                        very_local_manager.get(set_mac_req);
 
                         GetSystemPowerStatus(&status);
                         if(status.BatteryLifePercent>=min_threshold)
@@ -468,7 +471,7 @@ void worker::Plugged_In()
         }
         else
         {
-            QThread::sleep(20);
+            QThread::sleep(15);
             QString result=Request("status");
             if(result=="0")
             {
@@ -483,9 +486,10 @@ void worker::Plugged_In()
                         result=Request("connect");
                         if(result=="connected")
                         {
+                            QNetworkAccessManager very_local_manager;
                             QUrl mac_url(QString("http://"+IP+"/setmac?mac=%1").arg(client_mac));
                             QNetworkRequest set_mac_req(mac_url);
-                            manager->get(set_mac_req);
+                            very_local_manager.get(set_mac_req);
 
                             client_connected=true;
 
@@ -600,6 +604,13 @@ void worker::Log(const QString text)
             file.close();
         }
     }
+}
+
+void worker::shutdown()
+{
+    reset();
+    win->should_run=false;
+    should_run=false;
 }
 
 void worker::reset()

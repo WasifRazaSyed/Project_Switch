@@ -17,7 +17,7 @@ class win_api : public QObject
     Q_OBJECT
 public:
     explicit win_api(worker *parent = nullptr);
-
+    bool should_run=true;
 public slots:
     void Session_Obs();
     DWORD GetActiveSessionId();

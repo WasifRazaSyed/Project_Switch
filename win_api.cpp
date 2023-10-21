@@ -24,7 +24,7 @@ win_api::win_api(worker *parent): m_worker(parent)
 
 void win_api::Session_Obs()
 {
-    while(true)
+    do
     {
         GetMessage(&msg, NULL, 0, 0);
         if (msg.message == WM_WTSSESSION_CHANGE)
@@ -47,8 +47,8 @@ void win_api::Session_Obs()
             activeSessionId = newSessionId;
             return;
         }
-        Sleep(100);
-    }
+        QThread::msleep(100);
+    }while(should_run);
 }
 
 DWORD win_api::GetActiveSessionId()
@@ -83,7 +83,7 @@ QString win_api::GetMacAdd(QString IP)
     QProcess *ping=new QProcess(this);
     QStringList arg;
     arg<<IP;
-    ping->start("ping",arg);
+    ping->startDetached("ping -c 1 -w 2",arg);
     ping->deleteLater();
 
     std::string IPAdd=IP.toStdString();
