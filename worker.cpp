@@ -166,7 +166,7 @@ void worker::Fresh_Check()
                                     Log(parser);
                                 }
                             }
-                            if(status.BatteryLifeTime<=max_threshold)
+                            if(status.BatteryLifePercent<=max_threshold)
                             {
                                 special=true;
                             }
