@@ -26,8 +26,6 @@ public:
     QString newversion, oldversion, mac, client_mac;
     bool fresh=true, pop=false, temp=false, plugged=false, should_run=true, client_connected=false, special=false;
 signals:
-    void Plugged_();
-    void UnPlugged_();
 
 public slots:
     void Fetch_Settings();

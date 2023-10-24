@@ -4,11 +4,12 @@
 worker::worker(QObject *parent)
     : QObject{parent}, win(new win_api(this))
 {
-    connect(this, &worker::Plugged_, this, &worker::Plugged_In);
-    connect(this, &worker::UnPlugged_, this, &worker::Plugged_Out);
+    QString temp;
+    do{
+        temp=win->getCurrentUserName();
+    }while(temp.isEmpty()); //to ensure a user and its settings before begin the work
 	
     Fetch_Settings();
-
 }
 
 worker::~worker()
@@ -149,26 +150,33 @@ void worker::Fresh_Check()
                     if(result=="connected")
                     {
                         client_connected=true;
-                        QNetworkAccessManager very_local_manager;
-                        QUrl mac_url(QString("http://"+IP+"/setmac?mac=%1").arg(client_mac));
-                        QNetworkRequest set_mac_req(mac_url);
-                        very_local_manager.get(set_mac_req);
+                        QString par="setmac?mac="+client_mac;
+                        QString temp=Request(par);
 
                         GetSystemPowerStatus(&status);
                         if(status.BatteryLifePercent>=min_threshold)
                         {
-                            result=Request("off");
-                            if(result=="false")
+                            if(status.BatteryLifePercent==(max_threshold-1))
                             {
-                                if(status.ACLineStatus==0)
-                                {
-                                    QString parser="Turned off at: "+QString::number(status.BatteryLifePercent);
-                                    Log(parser);
-                                }
+
                             }
-                            if(status.BatteryLifePercent<=max_threshold)
+                            else
                             {
-                                special=true;
+                                result=Request("off");
+                                if(result=="false")
+                                {
+                                    QThread::msleep(1500);
+                                    GetSystemPowerStatus(&status);
+                                    if(status.ACLineStatus==0)
+                                    {
+                                        QString parser="Turned off at: "+QString::number(status.BatteryLifePercent);
+                                        Log(parser);
+                                    }
+                                }
+                                if(status.BatteryLifePercent<=max_threshold)
+                                {
+                                    special=true;
+                                }
                             }
                         }
                     }
@@ -188,11 +196,11 @@ void worker::Check_Update()
     QNetworkRequest request(version);
     QNetworkReply* reply = local.get(request);
 
-    QTimer *singleshot=new QTimer(this);
-    singleshot->setSingleShot(true);
-    singleshot->setInterval(30000);
+    QTimer singleshot;
+    singleshot.setSingleShot(true);
+    singleshot.setInterval(30000);
 
-    connect(singleshot, &QTimer::timeout, this, [=](){
+    connect(&singleshot, &QTimer::timeout, this, [=](){
         if(newversion.isEmpty())
         {
             reply->abort();
@@ -200,7 +208,7 @@ void worker::Check_Update()
         }
     });
 
-    singleshot->start();
+    singleshot.start();
 
     connect(reply, &QNetworkReply::finished, this, [&](){
         if(reply->error()==QNetworkReply::NoError)
@@ -234,11 +242,11 @@ void worker::Plugged_Status()
         if(temp!=plugged){
             if(temp){
                 plugged=temp;
-                emit Plugged_();
+                Plugged_In();
             }
             else if(!temp){
                 plugged=temp;
-                emit UnPlugged_();
+                Plugged_Out();
             }
         }
         QThread::msleep(15);
@@ -267,6 +275,7 @@ void worker::Thresholds_Status()
                         result=Request("off");
                         if(result=="false")
                         {
+                            QThread::msleep(1500);
                             GetSystemPowerStatus(&status);
                             if(status.ACLineStatus==0)
                             {
@@ -295,16 +304,15 @@ void worker::Thresholds_Status()
                         result=Request("connect");
                         if(result=="connected")
                         {
-                            QNetworkAccessManager very_local_manager;
-                            QUrl mac_url(QString("http://"+IP+"/setmac?mac=%1").arg(client_mac));
-                            QNetworkRequest set_mac_req(mac_url);
-                            very_local_manager.get(set_mac_req);
+                            QString par="setmac?mac="+client_mac;
+                            QString temp=Request(par);
 
                             client_connected=true;
                             result.clear();
                             result=Request("off");
                             if(result=="false")
                             {
+                                QThread::msleep(1500);
                                 GetSystemPowerStatus(&status);
                                 if(status.ACLineStatus==0)
                                 {
@@ -351,6 +359,7 @@ void worker::Thresholds_Status()
                             result=Request("on");
                             if(result=="true")
                             {
+                                QThread::sleep(5);
                                 GetSystemPowerStatus(&status);
                                 if(status.ACLineStatus)
                                 {
@@ -362,6 +371,10 @@ void worker::Thresholds_Status()
                             {
                                 client_connected=false;
                             }
+                        }
+                        else if(result=="1")
+                        {
+                            //do nothing
                         }
                         else
                         {
@@ -413,15 +426,32 @@ void worker::Plugged_In()
                 }
                 else
                 {
-                    if(special)
+                    GetSystemPowerStatus(&status);
+                    if(status.BatteryLifePercent==(min_threshold+1))
                     {
-                        special=false;
+                        result=Request("getmac");
+                        if(result!=client_mac)
+                        {
+                            client_connected=false;
+                        }
+                        if(special)
+                        {
+                            special=false;
+                        }
                     }
                     else
                     {
-                        client_connected=false;
-                        result.clear();
-                        Request("reset");
+                        GetSystemPowerStatus(&status);
+                        if(special)
+                        {
+                            special=false;
+                        }
+                        else
+                        {
+                            client_connected=false;
+                            result.clear();
+                            Request("reset");
+                        }
                     }
                 }
             }
@@ -429,20 +459,14 @@ void worker::Plugged_In()
             {
                 result.clear();
                 result=Request("current");
-                if(result=="0")
-                {
-                    client_connected=false;
-                }
-                else if(result=="1")
+                if(result=="1")
                 {
                     result.clear();
                     result=Request("connect");
                     if(result=="connected")
                     {
-                        QNetworkAccessManager very_local_manager;
-                        QUrl mac_url(QString("http://"+IP+"/setmac?mac=%1").arg(client_mac));
-                        QNetworkRequest set_mac_req(mac_url);
-                        very_local_manager.get(set_mac_req);
+                        QString par="setmac?mac="+client_mac;
+                        QString temp=Request(par);
 
                         GetSystemPowerStatus(&status);
                         if(status.BatteryLifePercent>=min_threshold)
@@ -451,6 +475,8 @@ void worker::Plugged_In()
                             result=Request("off");
                             if(result=="false")
                             {
+                                QThread::msleep(1500);
+                                GetSystemPowerStatus(&status);
                                 result.clear();
                                 if(status.ACLineStatus==0)
                                 {
@@ -469,6 +495,14 @@ void worker::Plugged_In()
                         }
                     }
                 }
+                else
+                {
+                    client_connected=false;
+                }
+            }
+            else
+            {
+                client_connected=false;
             }
         }
         else
@@ -488,10 +522,8 @@ void worker::Plugged_In()
                         result=Request("connect");
                         if(result=="connected")
                         {
-                            QNetworkAccessManager very_local_manager;
-                            QUrl mac_url(QString("http://"+IP+"/setmac?mac=%1").arg(client_mac));
-                            QNetworkRequest set_mac_req(mac_url);
-                            very_local_manager.get(set_mac_req);
+                            QString par="setmac?mac="+client_mac;
+                            QString temp=Request(par);
 
                             client_connected=true;
 
@@ -502,6 +534,7 @@ void worker::Plugged_In()
                                 result=Request("off");
                                 if(result=="false")
                                 {
+                                    QThread::msleep(1500);
                                     GetSystemPowerStatus(&status);
                                     if(status.ACLineStatus==0)
                                     {
@@ -554,6 +587,7 @@ void worker::Plugged_Out()
                             result=Request("on");
                             if(result=="true")
                             {
+                                QThread::sleep(5);
                                 GetSystemPowerStatus(&status);
                                 if(status.ACLineStatus)
                                 {
