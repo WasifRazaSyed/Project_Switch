@@ -19,7 +19,10 @@ win_api::win_api(worker *parent): m_worker(parent)
 
     WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_ALL_SESSIONS);
 
-    Q_UNUSED(QtConcurrent::run([this](){Session_Obs();}));
+    QTimer::singleShot(20000, this, [=](){
+        Q_UNUSED(QtConcurrent::run([this](){Session_Obs();}));
+    });
+
 }
 
 void win_api::Session_Obs()

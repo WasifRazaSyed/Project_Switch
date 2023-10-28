@@ -27,5 +27,5 @@ install(TARGETS Windows_Service
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-set(ICON_PATH "C:/Users/syedr/OneDrive/Documents/New folder/FYP_RENEW/Windows_Service/logo/icons8-services-32.ico")
-target_sources(Windows_Service PRIVATE ${ICON_PATH})
+#set(ICON_PATH "C:/Users/syedr/OneDrive/Documents/New folder/FYP_RENEW/Windows_Service/logo/icons8-services-32.ico")
+#target_sources(Windows_Service PRIVATE ${ICON_PATH})

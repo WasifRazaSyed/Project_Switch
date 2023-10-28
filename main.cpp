@@ -21,9 +21,6 @@ VOID Set_Actions(SC_HANDLE);
 VOID Install();
 VOID Delete();
 
-int argc=0;
-char *argv={nullptr};
-QCoreApplication a(argc, &argv);
 worker *w;
 
 int main(int argc, char *argv[])
@@ -32,6 +29,7 @@ int main(int argc, char *argv[])
     if(lstrcmpiA(argv[1],"install")==0){
         qDebug()<<"Installing...\r\n";
         Install();
+        return 0;
     }
     else if(lstrcmpiA(argv[1], "delete")==0){
         qDebug()<<"Deleting...\r\n";
@@ -88,11 +86,16 @@ VOID WINAPI SVC_MAIN( DWORD dw, LPWSTR * lp)
         Event_Report(LPWSTR("[ServiceCtrlHandler] SetServiceStatus returned error"));
     }
 
+    init();
 }
 
 void init()
 {
+    int argc=0;
+    char *argv={nullptr};
+    QCoreApplication a(argc, &argv);
     w=new worker(&a);
+    QObject::connect(&a, &QObject::destroyed, w, &QObject::deleteLater);
     a.exec();
 }
 
@@ -103,6 +106,7 @@ VOID WINAPI Ctrl_HL(DWORD control)
     // Handle the STOP control code
     case SERVICE_CONTROL_STOP:
     {
+
         if (status.dwCurrentState != SERVICE_RUNNING)
         {
             break;
@@ -119,8 +123,6 @@ VOID WINAPI Ctrl_HL(DWORD control)
         }
 
         w->shutdown();
-        a.exit();
-
 
         status.dwCurrentState = SERVICE_STOPPED;
         status.dwWin32ExitCode = 0;
@@ -151,7 +153,6 @@ BOOL WINAPI Console_HL(DWORD signal)
 {
     if (signal == CTRL_SHUTDOWN_EVENT || signal == CTRL_LOGOFF_EVENT)
     {
-        // handle shutdown or logoff event
         w->reset();
     }
     return TRUE;

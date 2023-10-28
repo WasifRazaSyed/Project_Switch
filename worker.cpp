@@ -4,11 +4,11 @@
 worker::worker(QObject *parent)
     : QObject{parent}, win(new win_api(this))
 {
-    QString temp;
+    QString temp1, temp2;
     do{
-        temp=win->getCurrentUserName();
-    }while(temp.isEmpty()); //to ensure a user and its settings before begin the work
-	
+        temp2=GetIp();
+        temp1=win->getCurrentUserName();
+    }while(temp1.isEmpty()||temp2.isEmpty()); //to ensure a user and its settings before begin the work
     Fetch_Settings();
 }
 
