@@ -643,10 +643,10 @@ void worker::Log(const QString text)
 }
 
 void worker::shutdown()
-{
-    reset();
+{   
     win->should_run=false;
     should_run=false;
+    reset();
 }
 
 void worker::reset()
