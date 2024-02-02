@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>logo/win_icon.ico</file>
+        <file>logo/icons8-signal-32.ico</file>
+    </qresource>
+</RCC>

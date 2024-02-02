@@ -1,0 +1,98 @@
+QLabel#note{
+color: red;
+}
+QTextEdit{
+background-color: white;
+}
+QLabel#logo_text{
+color: white;
+background-color: #245DDA;
+padding-bottom: 55px;
+}
+QLabel#logo_label{
+background-color: #245DDA;
+padding-bottom: 40px;
+}
+QPushButton#min,#exit{
+background-color: white;
+border: none;
+}
+QPushButton#exit:hover{
+background-color: red;
+}
+QPushButton#exit:pressed{
+background-color: #cd5c5c;
+}
+QPushButton#min:hover{
+background-color: #E0E0E0;
+}
+QPushButton#min:pressed{
+background-color: #BEBEBE;
+}
+QPushButton#pos1, #pos2, #neg1, #neg2{
+border: none;
+background-color: white;
+border-radius: 14px;
+}
+QPushButton#pos1:hover, #pos2:hover, #neg1:hover, #neg2:hover{
+background-color: #E0E0E0;
+
+}
+QPushButton#pos1:pressed, #pos2:pressed, #neg1:pressed, #neg2:pressed{
+background-color: #BEBEBE;
+
+}
+QPushButton#pos1, #pos2{
+image: url("://logo/icons8-plus-math-15 (1).png");
+}
+QPushButton#neg1, #neg2{
+image: url("://logo/icons8-minus-15.png");
+}
+QPushButton#info{
+image: url("://logo/normal.png");
+border:none;
+}
+QPushButton#info:hover{
+image: url("://logo/hover.png");
+}
+QTextEdit#mac_edit{
+border:1px solid;
+border-radius: 4px;
+}
+QSlider::groove:horizontal {
+    border: 1px solid #565a5e;
+    height: 10px;
+    background: #eee;
+    margin: 0px;
+    border-radius: 4px;
+}
+QSlider::handle:horizontal {
+    background: #245DDA;
+    border: 1px solid #245DDA;
+    width: 14px;
+    height: 8px;
+    border-radius: 4px;
+}
+QSlider::handle:horizontal:hover {
+    background:  #F0F0F0;
+    border: 1px solid #245DDA;
+    width: 14px;
+    height: 8px;
+    border-radius: 4px;
+}
+QLabel#version{
+    font-size: 12px;
+    padding-left: 5px;
+    background: white;
+}
+
+QProgressBar {
+    border: 1px solid green;
+    background-color:white;
+    text-align: center;
+    color: #1cb01c;
+ }
+QProgressBar::chunk{
+    background-color: #0D3210;
+ }
+

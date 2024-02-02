@@ -1,0 +1,17 @@
+<RCC>
+    <qresource prefix="/">
+        <file>font/Nunito-Regular.ttf</file>
+        <file>font/SteelrDemo.ttf</file>
+        <file>logo/hover.png</file>
+        <file>logo/icons8-close (1).svg</file>
+        <file>logo/icons8-subtract-32 (3).png</file>
+        <file>logo/normal.png</file>
+        <file>logo/win_icon.ico</file>
+        <file>style/stylesheet.css</file>
+        <file>logo/icons8-gear-30.png</file>
+        <file>logo/icons8-light-switch-80 (1).png</file>
+        <file>logo/icons8-minus-15.png</file>
+        <file>logo/icons8-plus-math-15 (1).png</file>
+        <file>logo/icons8-available-updates-24.png</file>
+    </qresource>
+</RCC>
