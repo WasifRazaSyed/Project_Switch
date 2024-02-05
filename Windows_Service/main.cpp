@@ -106,7 +106,6 @@ BOOL WINAPI HandlerEx(DWORD dwControl, DWORD dwEventType, LPVOID lpEventData, LP
 {
     switch (dwControl)
     {
-    // Handle the STOP control code
     case SERVICE_CONTROL_STOP:
     {
         if (status.dwCurrentState != SERVICE_RUNNING)
@@ -119,15 +118,10 @@ BOOL WINAPI HandlerEx(DWORD dwControl, DWORD dwEventType, LPVOID lpEventData, LP
 
         if (SetServiceStatus(status_handle, &status) == FALSE)
         {
-            w->Log("set service error");
             Event_Report(LPWSTR("[ServiceCtrlHandler] SetServiceStatus returned error"));
         }
 
-        int result=w->shutdown();
-        while(!result)
-        {
-
-        }
+        w->shutdown();
 
         status.dwCurrentState = SERVICE_STOPPED;
         status.dwWin32ExitCode = 0;
@@ -136,7 +130,6 @@ BOOL WINAPI HandlerEx(DWORD dwControl, DWORD dwEventType, LPVOID lpEventData, LP
 
         if (SetServiceStatus(status_handle, &status) == FALSE)
         {
-            w->Log("set service error");
             Event_Report(LPTSTR("[ServiceCtrlHandler] SetServiceStatus returned error"));
         }
         return NO_ERROR;
@@ -146,36 +139,27 @@ BOOL WINAPI HandlerEx(DWORD dwControl, DWORD dwEventType, LPVOID lpEventData, LP
     case SERVICE_CONTROL_PRESHUTDOWN:
     {
         status.dwCurrentState = SERVICE_STOP_PENDING;
-        status.dwWaitHint = 20000;
+        status.dwWaitHint = 10000;
 
         if (SetServiceStatus(status_handle, &status) == FALSE)
         {
-            w->Log("set service error");
             Event_Report(LPWSTR("[ServiceCtrlHandler] SetServiceStatus returned error"));
         }
 
-        int result=w->shutdown();
-        while(!result)
-        {
-
-        }
-
-        return NO_ERROR;
-    }
-
-    case SERVICE_CONTROL_SHUTDOWN:
-    {
-        int result=w->shutdown();
+        w->shutdown();
 
         status.dwCurrentState=SERVICE_STOPPED;
+        status.dwWin32ExitCode=0;
+        status.dwCheckPoint=0;
+        status.dwWaitHint=0;
 
         if(SetServiceStatus(status_handle, &status)==FALSE)
         {
-            w->Log("set service error");
             Event_Report(LPWSTR("[ServiceCtrlHandler] SetServiceStatus returned error"));
         }
         return NO_ERROR;
     }
+
 
     case SERVICE_CONTROL_INTERROGATE:
     {
@@ -289,7 +273,7 @@ VOID Install(){
         }
 
         SERVICE_PRESHUTDOWN_INFO preshut={0};
-        preshut.dwPreshutdownTimeout=20000;
+        preshut.dwPreshutdownTimeout=10000;
         if(!ChangeServiceConfig2(Service, SERVICE_CONFIG_PRESHUTDOWN_INFO, &preshut)){
             Event_Report(LPWSTR("[ChangeServiceConfig2] setting preshut down returned error"));
         }
