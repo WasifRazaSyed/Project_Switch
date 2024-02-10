@@ -20,6 +20,8 @@ HEADERS += \
     saver.h
 QMAKE_LFLAGS += -mwindows
 
-RC_ICONS += "C:\Users\syedr\OneDrive\Documents\New folder\original_FYP\up_ver\logo\icons8-buy-upgrade-32.ico"
+RC_ICONS += "G:\Rason Detre\Projects\FYP_RENEW\Project_Switch\up_ver\logo\icons8-buy-upgrade-32.ico"
+
+unix|win32: LIBS += -lWtsapi32
 
 RESOURCES +=
