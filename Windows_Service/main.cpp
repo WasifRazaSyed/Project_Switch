@@ -70,7 +70,6 @@ VOID WINAPI SVC_MAIN( DWORD dw, LPWSTR * lp)
     Q_UNUSED(lp);
 
     status_handle=RegisterServiceCtrlHandlerExW(SVCNAME, (LPHANDLER_FUNCTION_EX)HandlerEx, nullptr);
-
     if(!status_handle)
     {
         Event_Report(LPWSTR("RegisterServiceCtrlHandler"));
@@ -114,7 +113,7 @@ BOOL WINAPI HandlerEx(DWORD dwControl, DWORD dwEventType, LPVOID lpEventData, LP
         }
 
         status.dwCurrentState = SERVICE_STOP_PENDING;
-        status.dwWaitHint = 20000;
+        status.dwWaitHint = 10000;
 
         if (SetServiceStatus(status_handle, &status) == FALSE)
         {
@@ -159,7 +158,6 @@ BOOL WINAPI HandlerEx(DWORD dwControl, DWORD dwEventType, LPVOID lpEventData, LP
         }
         return NO_ERROR;
     }
-
 
     case SERVICE_CONTROL_INTERROGATE:
     {
