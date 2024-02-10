@@ -25,10 +25,11 @@ HEADERS += \
 
 RESOURCES += \
     logo.qrc
+
 unix|win32: LIBS += -lWtsapi32
 unix|win32: LIBS += -luser32
 
 RC_ICONS += \
-        "C:\Users\syedr\OneDrive\Documents\New folder\original_FYP\signal\logo\icons8-signal-32.ico" \
+        "G:\Rason Detre\Projects\FYP_RENEW\Project_Switch\signal\logo\icons8-signal-32.ico" \
 
 
