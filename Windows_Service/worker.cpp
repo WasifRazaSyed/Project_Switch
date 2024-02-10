@@ -201,7 +201,7 @@ void worker::Check_Update()
 {
     QEventLoop loop;
     QNetworkAccessManager local;
-    QUrl version("https://api.github.com/repos/WasifRazaSyed/ProFile/releases/latest");
+    QUrl version("https://api.github.com/repos/WasifRazaSyed/Project_Switch/releases/latest");
     QNetworkRequest request(version);
     QNetworkReply* reply = local.get(request);
 

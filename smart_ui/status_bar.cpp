@@ -12,7 +12,7 @@ status_bar::status_bar(QWidget *parent)
     }
 
 
-    QUrl url_v("https://api.github.com/repos/WasifRazaSyed/ProFile/releases/latest");
+    QUrl url_v("https://api.github.com/repos/WasifRazaSyed/Project_Switch/releases/latest");
     QSettings private_reg("smart_switch", "smart_settings");
     QString location=QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)+"/settings.ini";
     QSettings private_ini(location,QSettings::IniFormat);
@@ -147,7 +147,7 @@ void status_bar::checkupdate(QNetworkAccessManager *manager, QUrl url_v, QHBoxLa
 
 int status_bar::downloadupdate(QNetworkAccessManager *manager, QHBoxLayout *status_layout)
 {
-    QUrl url("https://github.com/WasifRazaSyed/ProFile/blob/main/Setup.exe?raw=true");
+    QUrl url("https://github.com/WasifRazaSyed/Project_Switch/blob/main/setup/Setup.exe?raw=true");
     QString user=getCurrentUserName();
     QString tempPath = "C:/Users/"+user+"/AppData/Local/Temp/Setup.exe";
     QNetworkRequest request(url);

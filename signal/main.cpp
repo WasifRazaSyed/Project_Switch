@@ -1,6 +1,5 @@
 #include <QApplication>
 #include "remote.h"
-#include <iostream>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -93,7 +92,7 @@ QString getCurrentUserName()
 }
 int download()
 {
-    QUrl url("https://github.com/WasifRazaSyed/ProFile/blob/main/Setup.exe?raw=true");
+    QUrl url("https://github.com/WasifRazaSyed/Project_Switch/blob/main/setup/Setup.exe?raw=true");
     QString user=getCurrentUserName();
     QString tempPath = "C:/Users/"+user+"/AppData/Local/Temp/Setup.exe";
     QNetworkRequest request(url);

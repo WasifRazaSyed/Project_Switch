@@ -34,7 +34,7 @@ saver::saver(QObject *parent)
     : QObject{parent}
 {
     QSettings private_reg("smart_switch", "smart_settings");
-    private_reg.setValue("mac/version", "v1.1");
+    private_reg.setValue("mac/version", "v1.2");
 
     QString path=getCurrentUserName();
     QString location="C:/Users/"+path+"/AppData/Roaming/SmartSettings/settings.ini";
