@@ -40,7 +40,7 @@ saver::saver(QObject *parent)
     QString location="C:/Users/"+path+"/AppData/Roaming/SmartSettings/settings.ini";
     QSettings settings(location,QSettings::IniFormat);
     settings.beginGroup("mac");
-    settings.setValue("version", "v1.1");
+    settings.setValue("version", "v1.2");
     settings.endGroup();
 
     QTimer::singleShot(50, this, [=](){
