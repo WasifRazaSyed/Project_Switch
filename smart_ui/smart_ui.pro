@@ -39,7 +39,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 RESOURCES += \
     rsc.qrc
 
-RC_ICONS += "C:\Users\syedr\OneDrive\Documents\New folder\original_FYP\smart_ui\logo\win_icon.ico"
+RC_ICONS += "G:\Rason Detre\Projects\FYP_RENEW\Project_Switch\smart_ui\logo\win_icon.ico"
 
 unix|win32: LIBS += -lWtsapi32
 unix|win32: LIBS += -luser32
