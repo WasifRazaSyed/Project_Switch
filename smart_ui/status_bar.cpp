@@ -81,6 +81,7 @@ QString status_bar::getCurrentUserName()
 void status_bar::checkupdate(QNetworkAccessManager *manager, QUrl url_v, QHBoxLayout *status_layout)
 {
     QNetworkRequest request(url_v);
+    request.setRawHeader("Authorization", QString("token %1").arg("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").toUtf8());
     QNetworkReply* reply = manager->get(request);
     QTimer::singleShot(30000, this, [=](){
         if(newversion.isEmpty()){
@@ -143,6 +144,7 @@ void status_bar::checkupdate(QNetworkAccessManager *manager, QUrl url_v, QHBoxLa
             reply->deleteLater();
         }
     });
+
 }
 
 int status_bar::downloadupdate(QNetworkAccessManager *manager, QHBoxLayout *status_layout)
