@@ -30,6 +30,7 @@ public:
     ~status_bar();
     QString getCurrentUserName();
 private:
+    int destroyed=0;
     QLabel *version;
     QProgressBar *progress;
     QString oldversion;    

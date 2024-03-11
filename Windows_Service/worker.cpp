@@ -203,16 +203,26 @@ void worker::Check_Update()
     QNetworkAccessManager local;
     QUrl version("https://api.github.com/repos/WasifRazaSyed/Project_Switch/releases/latest");
     QNetworkRequest request(version);
+    request.setRawHeader("Authorization", QString("token %1").arg("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").toUtf8());
     QNetworkReply* reply = local.get(request);
+
 
     QTimer singleshot;
     singleshot.setSingleShot(true);
     singleshot.setInterval(30000);
 
-    connect(&singleshot, &QTimer::timeout, this, [=](){
-        if(newversion.isEmpty())
+    connect(reply, &QObject::destroyed, [&]()
+            {
+        destroyed=1;
+    });
+
+    connect(&singleshot, &QTimer::timeout, this, [&](){
+        if(newversion=="")
         {
-            reply->abort();
+            if(destroyed==0)
+            {
+                reply->abort();
+            }
             return;
         }
     });

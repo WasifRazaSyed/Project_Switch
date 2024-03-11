@@ -43,6 +43,7 @@ public slots:
     int shutdown();
     void reset();
 private:
+    int destroyed=0;
     QMutex mutex;
     QString IP;
     QScopedPointer<win_api> win;

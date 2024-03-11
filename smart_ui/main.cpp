@@ -7,6 +7,7 @@
 
 int main( int argc, char* argv[] )
 {
+    
     QApplication app( argc, argv );
     remote rObj;
     QRemoteObjectHost srcNode(QUrl(QStringLiteral("local:switch"))); // create host node without Registry
@@ -26,5 +27,6 @@ int main( int argc, char* argv[] )
     w.setWindowTitle(title);
     w.show();
     return app.exec();
+    
 
 }

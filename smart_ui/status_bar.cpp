@@ -80,19 +80,44 @@ QString status_bar::getCurrentUserName()
 
 void status_bar::checkupdate(QNetworkAccessManager *manager, QUrl url_v, QHBoxLayout *status_layout)
 {
+
     QNetworkRequest request(url_v);
-    request.setRawHeader("Authorization", QString("token %1").arg("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").toUtf8());
+    request.setRawHeader("Authorization", QString("token %1").arg("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").toUtf8());
     QNetworkReply* reply = manager->get(request);
-    QTimer::singleShot(30000, this, [=](){
-        if(newversion.isEmpty()){
-            reply->abort();
-            version->setText("Network Error.");
-            QTimer::singleShot(5000, this, [=](){
-                version->setText(oldversion);
+
+    QTimer singleshot;
+    singleshot.setSingleShot(true);
+    singleshot.setInterval(30000);
+
+    connect(&singleshot, &QTimer::timeout, [&]()
+            {
+                if(newversion.isEmpty()){
+                    if(destroyed==0)
+                    {
+                        reply->abort();
+                        version->setText("Network Error.");
+                        QTimer::singleShot(5000, this, [=](){
+                            version->setText(oldversion);
+                        });
+                    }
+                    else
+                    {
+                        version->setText("Network Error.");
+                        QTimer::singleShot(5000, this, [=](){
+                            version->setText(oldversion);
+                        });
+                    }
+                    return;
+                }
             });
-            return;
-        }
+
+    singleshot.start();
+
+    connect(reply, &QObject::destroyed, [&]()
+            {
+        destroyed=1;
     });
+
     connect(qApp, &QApplication::aboutToQuit, reply, &QNetworkReply::abort);
     connect(reply, &QIODevice::readyRead, this, [=](){
         if (reply->error() != QNetworkReply::NoError) {
@@ -144,7 +169,6 @@ void status_bar::checkupdate(QNetworkAccessManager *manager, QUrl url_v, QHBoxLa
             reply->deleteLater();
         }
     });
-
 }
 
 int status_bar::downloadupdate(QNetworkAccessManager *manager, QHBoxLayout *status_layout)
